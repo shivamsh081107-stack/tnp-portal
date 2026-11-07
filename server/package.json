@@ -1,0 +1,43 @@
+{
+  "name": "tnp-server",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/seed/seed.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.6.0",
+    "compression": "^1.8.0",
+    "connect-flash": "^0.1.1",
+    "connect-redis": "^8.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.6.0",
+    "joi": "^17.13.3",
+    "mongoose": "^8.13.1",
+    "morgan": "^1.10.0",
+    "multer": "1.4.5-lts.2",
+    "nodemailer": "^6.10.0",
+    "openai": "^4.91.1",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0",
+    "passport-local-mongoose": "^8.0.0",
+    "pdf-parse": "^1.1.1",
+    "rate-limit-redis": "^4.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9",
+    "supertest": "^7.1.0"
+  }
+}

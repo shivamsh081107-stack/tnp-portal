@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IIIT Bhopal TNP — full portal prototype</title>
+  <style>
+    :root {
+      --navy: #0b1f3a;
+      --navy-2: #13284a;
+      --blue: #2563eb;
+      --bg: #f4f7fb;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e6edf5;
+      --card: #fff;
+      --green: #059669;
+      --amber: #d97706;
+      --red: #dc2626;
+      --violet: #7c3aed;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    button, input, select, textarea { font: inherit; }
+    .switch {
+      position: sticky; top: 0; z-index: 30; display: flex; gap: 8px; align-items: center;
+      padding: 8px 14px; background: #fff; border-bottom: 1px solid var(--line);
+    }
+    .switch b { font-size: 13px; margin-right: 6px; }
+    .switch button, .mini {
+      border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; cursor: pointer;
+    }
+    .switch button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .note { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .shell { min-height: calc(100vh - 46px); }
+    .public-top {
+      background: #fff; border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; gap: 18px; padding: 12px 28px;
+    }
+    .brand { display: flex; gap: 10px; align-items: center; font-weight: 700; }
+    .mark {
+      width: 38px; height: 38px; border-radius: 10px; background: var(--navy); color: #fff;
+      display: grid; place-items: center; font-size: 12px;
+    }
+    .brand small { display: block; font-weight: 500; color: var(--muted); font-size: 11px; }
+    .public-top nav { display: flex; gap: 6px; margin-left: 12px; flex-wrap: wrap; }
+    .public-top nav button, .side button.nav {
+      background: transparent; border: 0; color: #334155; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    }
+    .public-top nav button.on { color: var(--blue); font-weight: 700; }
+    .login-btn { margin-left: auto; background: var(--blue); color: #fff; border: 0; border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+    .page { padding: 22px 28px 40px; }
+    .hero {
+      background: linear-gradient(115deg, #0b1f3a 0%, #1e3a8a 58%, #2563eb 100%);
+      color: #fff; border-radius: 22px; padding: 42px 40px; display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 20px;
+    }
+    .hero h1 { font-size: 42px; line-height: 1.05; margin: 8px 0 10px; }
+    .hero p { opacity: 0.85; max-width: 520px; }
+    .hero .actions { display: flex; gap: 10px; margin-top: 16px; }
+    .hero .ghost, .btn, .btn.light, .btn.ghost { border-radius: 10px; padding: 9px 14px; cursor: pointer; border: 0; }
+    .hero .ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.45); }
+    .btn { background: var(--blue); color: #fff; }
+    .btn.light { background: #fff; color: var(--navy); font-weight: 700; }
+    .btn.ghost { background: #fff; color: var(--text); border: 1px solid var(--line); }
+    .btn:disabled { background: #cbd5e1; color: #fff; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+    .stats.three { grid-template-columns: repeat(3, 1fr); }
+    .card { background: #fff; border-radius: 16px; padding: 16px; border: 1px solid #eef2f7; }
+    .k { color: var(--muted); font-size: 12px; }
+    .v { font-size: 26px; font-weight: 750; margin-top: 4px; }
+    .sub { color: var(--muted); font-size: 13px; }
+    .grid-2 { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 14px; margin-top: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 1.1fr 0.9fr 0.8fr; gap: 14px; }
+    h1 { margin: 0 0 4px; font-size: 28px; }
+    h2 { margin: 0 0 8px; font-size: 16px; }
+    h3 { margin: 0 0 6px; font-size: 15px; }
+    .app { display: grid; grid-template-columns: 248px 1fr; min-height: calc(100vh - 46px); }
+    .side { background: var(--navy); color: #dbeafe; padding: 16px 12px; }
+    .side .who { padding: 8px 10px 16px; }
+    .side .who b { color: #fff; display: block; }
+    .side button.nav { color: #dbeafe; width: 100%; text-align: left; display: flex; gap: 8px; }
+    .side button.nav.on { background: rgba(255,255,255,.1); color: #fff; }
+    .topbar { background: #fff; border-bottom: 1px solid var(--line); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .pill { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 8px; }
+    .ok { background: #ecfdf5; color: #047857; }
+    .warn { background: #fffbeb; color: #b45309; }
+    .bad { background: #fef2f2; color: #b91c1c; }
+    .info { background: #eff6ff; color: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; }
+    th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); font-size: 14px; }
+    th { color: var(--muted); font-size: 12px; }
+    .row-cards { display: grid; gap: 10px; }
+    .drive { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+    .drive .head { display: flex; justify-content: space-between; gap: 10px; }
+    .banner { border-radius: 12px; padding: 10px 12px; font-size: 14px; margin-top: 8px; }
+    .banner.warn { background: #fffbeb; color: #78350f; }
+    .banner.bad { background: #fef2f2; color: #7f1d1d; }
+    .banner.ok { background: #ecfdf5; color: #064e3b; }
+    .banner.info { background: #eff6ff; color: #1e3a8a; }
+    .split { min-height: calc(100vh - 120px); display: grid; grid-template-columns: 1.05fr 0.95fr; }
+    .visual { background: linear-gradient(165deg, #0b1f3a, #1d4ed8); color: #fff; padding: 48px; display: flex; flex-direction: column; justify-content: center; }
+    .visual h1 { font-size: 40px; }
+    .form { display: flex; align-items: center; justify-content: center; padding: 32px; }
+    .form .card { width: min(420px, 100%); }
+    label { display: block; font-size: 13px; margin: 10px 0 4px; color: #334155; }
+    input, select, textarea { width: 100%; border: 1px solid #dbe3ee; border-radius: 10px; padding: 10px 12px; background: #fff; }
+    .roles { display: flex; gap: 8px; }
+    .roles button { flex: 1; }
+    .roles button.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .icon {
+      width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 700;
+    }
+    .statline { display: flex; gap: 12px; align-items: center; }
+    .bars { display: flex; align-items: flex-end; gap: 14px; height: 150px; }
+    .bars div { flex: 1; background: #2563eb; border-radius: 8px 8px 2px 2px; position: relative; }
+    .bars span { position: absolute; bottom: -36px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--muted); }
+    .chart-wrap { padding-bottom: 36px; }
+    .chat { background: #f8fafc; border-radius: 12px; padding: 12px; min-height: 180px; }
+    .bubble { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; margin: 6px 0; font-size: 14px; }
+    .bubble.me { background: #dbeafe; border-color: #bfdbfe; }
+    .steps .step { display: grid; grid-template-columns: 16px 1fr; gap: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 99px; background: #cbd5e1; margin-top: 4px; }
+    .dot.on { background: var(--blue); }
+    .line { width: 2px; height: 22px; background: #e2e8f0; margin-left: 4px; }
+    .links a, .links button { display: block; background: none; border: 0; color: var(--blue); padding: 6px 0; cursor: pointer; text-align: left; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .people { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .person { text-align: center; }
+    .avatar { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 8px; background: #dbeafe; color: #1e3a8a; display: grid; place-items: center; font-weight: 700; }
+    .search { display: flex; gap: 8px; margin: 12px 0; }
+    .search input { max-width: 280px; }
+    .footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px; }
+  </style>
+</head>
+<body>
+  <div class="switch">
+    <b>Preview role</b>
+    <button id="r-public" class="on">Public</button>
+    <button id="r-student">Student</button>
+    <button id="r-tnp">TNP team</button>
+    <button id="r-admin">Admin</button>
+    <span class="note">Visual prototype. Open drives and people are sample layout. Package figures follow the 15 April 2026 seed.</span>
+  </div>
+  <div id="app"></div>
+  <script>
+    const MENUS = {
+      public: [
+        ["home", "Home"], ["about", "About TNP"], ["companies", "Companies"], ["drives", "Placement drives"],
+        ["statistics", "Statistics"], ["team", "TNP team"], ["criteria", "Joining criteria"], ["contact", "Contact"]
+      ],
+      student: [
+        ["s-dash", "Dashboard"], ["s-drives", "Placement drives"], ["s-apps", "My applications"],
+        ["s-resume", "Resume"], ["s-profile", "Profile"], ["s-academics", "Academics"],
+        ["s-notes", "Notifications"], ["s-ai", "AI assistant"], ["s-analyzer", "Resume analyzer"]
+      ],
+      tnp: [
+        ["t-dash", "Dashboard"], ["t-drives", "Assigned drives"], ["t-apps", "Application review"],
+        ["t-students", "Student records"], ["t-place", "Placement updates"],
+        ["t-notes", "Announcements"], ["t-profile", "Team profile"], ["t-criteria", "Joining criteria"]
+      ],
+      admin: [
+        ["a-dash", "Dashboard"], ["a-students", "Students"], ["a-team", "TNP team"],
+        ["a-companies", "Companies"], ["a-drives", "Drives"], ["a-apps", "Applications"],
+        ["a-stats", "Statistics"], ["a-criteria", "Joining criteria"], ["a-notes", "Announcements"],
+        ["a-recruiters", "Recruiters"], ["a-roles", "Roles"], ["a-import", "Import / export"],
+        ["a-audit", "Audit logs"], ["a-health", "System health"]
+      ]
+    };
+
+    const roleOf = {};
+    Object.entries(MENUS).forEach(([role, items]) => items.forEach(([id]) => { roleOf[id] = role; }));
+    roleOf.login = "public";
+    roleOf.signup = "public";
+    roleOf.forgot = "public";
+    roleOf.company = "public";
+    roleOf.drive = "public";
+
+    let role = "public";
+    let screen = "home";
+
+    function go(id) {
+      screen = id;
+      role = roleOf[id] || role;
+      if (id.startsWith("s-")) role = "student";
+      if (id.startsWith("t-")) role = "tnp";
+      if (id.startsWith("a-")) role = "admin";
+      if (["home","about","companies","drives","statistics","team","criteria","contact","login","signup","forgot","company","drive"].includes(id) && !id.startsWith("s-") && !id.startsWith("t-") && !id.startsWith("a-")) {
+        if (["home","about","companies","drives","statistics","team","criteria","contact","login","signup","forgot","company","drive"].includes(id)) role = "public";
+      }
+      location.hash = id;
+      draw();
+    }
+
+    function table(headers, rows) {
+      return `<table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    }
+    function stat(label, value, hint, color) {
+      return `<div class="card statline"><div class="icon" style="background:${color}"></div><div><div class="k">${label}</div><div class="v">${value}</div><div class="sub">${hint || ""}</div></div></div>`;
+    }
+
+    const pages = {
+      home() {
+        return `<div class="page">
+          <div class="hero">
+            <div>
+              <div class="pill" style="background:#fff;color:#1d4ed8">TNP · IIIT Bhopal</div>
+              <h1>Turning potential into progress</h1>
+              <p>Training and Placement Cell, IIIT Bhopal. One place for drives, statistics, the TNP team, and student applications.</p>
+              <div class="actions">
+                <button class="btn light" onclick="go('drives')">Explore opportunities</button>
+                <button class="ghost" onclick="go('about')">About TNP</button>
+              </div>
+            </div>
+            <div>
+              <div class="k" style="color:#dbeafe">Batch 2026 · in progress as of 15 Apr 2026</div>
+              <div style="font-size:42px;font-weight:750;margin-top:8px">58 LPA</div>
+              <div>Highest package highlight · Cred · IT</div>
+              <div style="margin-top:12px">Average CTC overall · 18.02 LPA · not the highest package</div>
+            </div>
+          </div>
+          <div class="stats">
+            ${stat("Highest · IT", "58", "Cred · batch 2026", "#2563eb")}
+            ${stat("Highest · ECE", "57", "Meesho · batch 2026", "#d97706")}
+            ${stat("Highest · CSE", "41", "Motive · batch 2026", "#059669")}
+            ${stat("Average CTC", "18.02", "Overall · 134 of 150", "#7c3aed")}
+          </div>
+          <div class="grid-2">
+            <div class="card"><h2>Latest announcements</h2><p><b>Resume workshop</b></p><p class="sub">31 Oct · all final-year students · sample notice</p><p style="margin-top:10px"><b>Registration window</b></p><p class="sub">Profile and resume must be complete before a drive closes.</p></div>
+            <div class="card"><h2>Quick links</h2><div class="links">
+              <button onclick="go('drives')">Placement drives</button>
+              <button onclick="go('companies')">Companies</button>
+              <button onclick="go('statistics')">Statistics</button>
+              <button onclick="go('team')">TNP team</button>
+              <button onclick="go('login')">Student / team sign in</button>
+            </div></div>
+          </div>
+        </div>`;
+      },
+      about() {
+        return `<div class="page"><h1>About TNP</h1><p class="sub">Training and Placement Cell, IIIT Bhopal.</p>
+          <div class="two" style="margin-top:14px">
+            <div class="card"><h2>What this portal is for</h2><p>Students keep a profile and resume, see eligible drives, apply, and track status. The TNP team reviews assigned drives. Administrators manage records, permissions, and published statistics.</p></div>
+            <div class="card"><h2>How a drive moves</h2><p>Published drive → eligibility check → apply → shortlist → assessment → interview → offer. Deadlines and branch rules are enforced on the server.</p></div>
+          </div></div>`;
+      },
+      companies() {
+        return `<div class="page"><h1>Companies</h1><p class="sub">Past recruiters from the statistics source, plus sample company profiles. An open role is not implied.</p>
+          <div class="search"><input placeholder="Search companies" value="Ama" /><button class="btn ghost">Search</button></div>
+          ${table(["Company", "Seen in statistics", "Sample profile"], [
+            ["Amazon", "Batch 2024 highest · 46 LPA", "<button class='mini' onclick=\"go('company')\">View</button>"],
+            ["Atlassian", "Batch 2025 highest · 85 LPA", "<button class='mini' onclick=\"go('company')\">View</button>"],
+            ["Microsoft", "Batch 2025 · 45 LPA", "<button class='mini' onclick=\"go('company')\">View</button>"],
+            ["Cred", "Batch 2026 IT highlight · 58 LPA", "<button class='mini' onclick=\"go('company')\">View</button>"]
+          ])}</div>`;
+      },
+      company() {
+        return `<div class="page"><h1>Amazon</h1><p class="sub">Company profile layout. Package shown here is a past statistics highlight, not a live opening.</p>
+          <div class="two" style="margin-top:14px">
+            <div class="card"><h2>Overview</h2><p>Campus recruiter record linked to verified placement statistics.</p><p class="sub">Work mode and website are filled only when an admin publishes them.</p></div>
+            <div class="card"><h2>Statistics link</h2><p>Batch 2024 highest package highlight: 46 LPA. Source: 15 April 2026 statistics document.</p><button class="btn" style="margin-top:10px" onclick="go('statistics')">Open statistics</button></div>
+          </div></div>`;
+      },
+      drives() {
+        return `<div class="page"><h1>Placement drives</h1><p class="sub">Public list. Sample drives are labeled. Eligibility appears after sign-in.</p>
+          <div class="row-cards" style="margin-top:12px">
+            <div class="drive"><div class="head"><div><b>Sample · Meridian Systems</b><div class="sub">SDE intern · CSE/IT · min CGPA 7.0 · closes in 18 hours</div></div><span class="pill info">Open · sample</span></div></div>
+            <div class="drive"><div class="head"><div><b>Sample · Helios Labs</b><div class="sub">SDE · CSE/IT · min CGPA 8.0 · closes in 6 days</div></div><span class="pill warn">Open · sample</span></div></div>
+            <div class="drive"><div class="head"><div><b>Sample · Lumen Devices</b><div class="sub">Hardware intern · ECE only · closes in 3 days</div></div><span class="pill warn">Open · sample</span></div></div>
+          </div>
+          <p style="margin-top:12px"><button class="btn" onclick="go('login')">Sign in to apply</button></p></div>`;
+      },
+      drive() { return pages.drives(); },
+      statistics() {
+        return `<div class="page"><h1>Placement statistics</h1><p class="sub">Average CTC (LPA) by batch. Separate from highest package. Source: 15 April 2026 statistics document. Batch 2026 was in progress.</p>
+          <div class="card chart-wrap" style="margin:14px 0"><div class="bars">
+            ${[["42%","2021","9.26"],["62%","2022","14.5"],["92%","2023","20.51"],["54%","2024","12.32"],["70%","2025","16.09"],["80%","2026","18.02"]].map(([h,y,n]) => `<div style="height:${h}"><span>${y}<br>${n}</span></div>`).join("")}
+          </div></div>
+          <h2>Batch 2026 branch average CTC</h2>
+          ${table(["Branch", "Average CTC", "Placed", "Participated", "Placement %"], [
+            ["ECE", "17.16 LPA", "39", "47", "82.97"],
+            ["CSE", "19.56 LPA", "49", "51", "96.07"],
+            ["IT", "17.13 LPA", "46", "52", "88.46"]
+          ])}
+          <h2 style="margin-top:16px">Highest package, not average</h2>
+          ${table(["Batch", "Company", "Highest package", "Scope"], [
+            ["2026", "Cred", "58 LPA", "IT highlight"],
+            ["2026", "Meesho", "57 LPA", "ECE highlight"],
+            ["2026", "Motive", "41 LPA", "CSE highlight"],
+            ["2025", "Atlassian", "85 LPA", "Overall highest"],
+            ["2025", "Cred", "58 LPA", "Second highest"],
+            ["2025", "Microsoft", "45 LPA", "Third highest"]
+          ])}</div>`;
+      },
+      team() {
+        return `<div class="page"><h1>TNP team</h1><p class="sub">Card layout only. Names are not filled because this repository has no authorized member list.</p>
+          <div class="people" style="margin-top:14px">
+            ${["Faculty in charge", "Student coordinator", "Training coordinator", "Event coordinator"].map((r) => `<div class="card person"><div class="avatar">?</div><b>${r}</b><div class="sub">Awaiting published record</div></div>`).join("")}
+          </div></div>`;
+      },
+      criteria() {
+        return `<div class="page"><h1>Joining criteria</h1>
+          <div class="banner warn">Draft structure. Do not treat this as the cell’s published rule until an admin marks it published from an authorized source.</div>
+          <div class="two" style="margin-top:14px">
+            <div class="card"><h2>What the page will show</h2><p>Academic bar, weekly time commitment, and the selection steps the cell actually uses.</p></div>
+            <div class="card"><h2>Status</h2><span class="pill warn">Draft</span><p class="sub" style="margin-top:8px">Students see this page only after it is published.</p></div>
+          </div></div>`;
+      },
+      contact() {
+        return `<div class="page"><h1>Contact</h1><div class="two" style="margin-top:14px">
+          <div class="card"><h2>TNP cell</h2><p>IIIT Bhopal</p><p class="sub">Email and phone appear here from the contact record, not from a guessed address.</p><p class="sub">Use the form for a placement query. It does not create an application.</p></div>
+          <div class="card"><h2>Write to the cell</h2><label>Name</label><input value="Sample student" /><label>Email</label><input value="sample@iiitbhopal.ac.in" /><label>Message</label><textarea rows="3">Question about the Meridian PPT.</textarea><button class="btn" style="margin-top:10px">Send</button></div>
+        </div></div>`;
+      },
+      login() {
+        return `<div class="split"><div class="visual"><div class="pill" style="background:rgba(255,255,255,.15);color:#fff;width:max-content">IIIT Bhopal</div><h1>Your future starts here</h1><p>Students, TNP team, and administrators sign in here. The server chooses the dashboard from the account role.</p></div>
+          <div class="form"><div class="card"><h2>Welcome back</h2><p class="sub">Prototype buttons open that role’s dashboard. They do not check a password.</p>
+            <div class="roles" style="margin-top:12px">
+              <button class="mini on" onclick="go('s-dash')">Student</button>
+              <button class="mini" onclick="go('t-dash')">TNP team</button>
+              <button class="mini" onclick="go('a-dash')">Admin</button>
+            </div>
+            <label>Email</label><input value="sample@iiitbhopal.ac.in" />
+            <label>Password</label><input type="password" value="password" />
+            <p><button class="mini" onclick="go('forgot')">Forgot password?</button></p>
+            <button class="btn" onclick="go('s-dash')">Login as student</button>
+            <p class="sub" style="margin-top:10px">No account? <button class="mini" onclick="go('signup')">Sign up</button></p>
+          </div></div></div>`;
+      },
+      signup() {
+        return `<div class="page"><h1>Create a student account</h1><div class="card" style="max-width:480px;margin-top:12px">
+          <label>Name</label><input placeholder="Full name" />
+          <label>Roll number</label><input placeholder="2023CSE042" />
+          <label>Branch</label><select><option>CSE</option><option>IT</option><option>ECE</option></select>
+          <label>Phone</label><input placeholder="10-digit mobile" />
+          <label>Email</label><input placeholder="college email" />
+          <label>Password</label><input type="password" />
+          <p class="sub">OTP is sent through MSG91 when that integration is configured. This preview does not send an SMS.</p>
+          <button class="btn" onclick="go('s-dash')">Verify and continue</button>
+        </div></div>`;
+      },
+      forgot() {
+        return `<div class="page"><h1>Reset password</h1><div class="card" style="max-width:460px;margin-top:12px">
+          <p class="sub">A single-use link goes to the account email. The link expires and cannot be reused.</p>
+          <label>Email</label><input value="sample@iiitbhopal.ac.in" />
+          <button class="btn">Send reset link</button>
+        </div></div>`;
+      },
+      "s-dash"() {
+        return `<div class="page"><h1>Welcome back</h1><p class="sub">Sample student · CSE · batch 2027 · CGPA 7.4</p>
+          <div class="stats">${stat("Eligible drives", "1", "Of 3 open samples", "#2563eb")}${stat("Applied", "1", "Aster Analytics", "#7c3aed")}${stat("Shortlisted", "1", "OA on 28 Oct", "#059669")}${stat("Offers", "0", "None yet", "#d97706")}</div>
+          <div class="card" style="margin-top:14px"><div class="k">Profile completeness · 4 of 5</div><div style="height:8px;background:#e2e8f0;border-radius:99px;margin-top:8px"><div style="width:80%;height:100%;background:#2563eb;border-radius:99px"></div></div><p class="sub">Resume is missing, so Meridian Apply stays off.</p></div>
+          <div class="grid-2">
+            <div class="card"><h2>Upcoming deadlines</h2>
+              <p><b>Meridian Systems</b> · PPT · 18 hours <span class="pill warn">Resume missing</span></p>
+              <p><b>Aster Analytics</b> · online assessment · 28 Oct <span class="pill info">Scheduled</span></p>
+              <button class="btn ghost" onclick="go('s-drives')">View drives</button>
+            </div>
+            <div class="card"><h2>Notices for you</h2>
+              <p><b>Meridian PPT is mandatory</b></p><p class="sub">Audience: CSE, batch 2027</p>
+              <button class="btn ghost" onclick="go('s-notes')">Open notifications</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+            <div><h2>AI placement assistant</h2><p class="sub">Asks about eligibility, this profile, and published drives. It does not change an application.</p></div>
+            <button class="btn" onclick="go('s-ai')">Chat now</button>
+          </div></div>`;
+      },
+      "s-drives"() {
+        return `<div class="page"><h1>Available drives</h1><p class="sub">Server result for CSE, CGPA 7.4, resume missing.</p>
+          <div class="row-cards" style="margin-top:12px">
+            <div class="drive"><div class="head"><div><b>Meridian Systems · SDE intern</b><div class="sub">Closes in 18 hours · CSE/IT · min 7.0</div></div><span class="pill warn">Resume missing</span></div><div class="banner warn">Branch and CGPA match. Upload a resume before Apply.</div><button class="btn" disabled>Apply</button></div>
+            <div class="drive"><div class="head"><div><b>Helios Labs · SDE</b><div class="sub">Closes in 6 days · min CGPA 8.0</div></div><span class="pill bad">Not eligible</span></div><div class="banner bad">Short by 0.6 CGPA.</div></div>
+            <div class="drive"><div class="head"><div><b>Lumen Devices · Hardware intern</b><div class="sub">ECE only</div></div><span class="pill warn">Branch not allowed</span></div></div>
+            <div class="drive"><div class="head"><div><b>Aster Analytics · Analyst</b><div class="sub">Already applied</div></div><span class="pill info">In progress</span></div><button class="btn ghost" onclick="go('s-apps')">Open timeline</button></div>
+          </div></div>`;
+      },
+      "s-apps"() {
+        return `<div class="page"><h1>My applications</h1>
+          <div class="two" style="margin-top:12px">
+            <div class="card"><h2>Aster Analytics · Analyst</h2>
+              <div class="steps">
+                <div class="step"><div><div class="dot on"></div><div class="line"></div></div><div><b>Applied</b><div class="sub">12 Oct 2026 · 09:14</div></div></div>
+                <div class="step"><div><div class="dot on"></div><div class="line"></div></div><div><b>Shortlisted</b><div class="sub">18 Oct 2026</div></div></div>
+                <div class="step"><div><div class="dot on"></div><div class="line"></div></div><div><b>Online assessment · current</b><div class="sub">28 Oct 2026 · 10:00</div></div></div>
+                <div class="step"><div><div class="dot"></div><div class="line"></div></div><div><b>Interview</b><div class="sub">After the assessment</div></div></div>
+                <div class="step"><div><div class="dot"></div></div><div><b>Offer</b><div class="sub">Not reached</div></div></div>
+              </div>
+            </div>
+            <div class="card"><h2>History</h2>${table(["Drive", "Status", "Updated"], [["Aster Analytics", "Shortlisted", "18 Oct"], ["Winter intern · sample", "Rejected", "02 Sep"]])}</div>
+          </div></div>`;
+      },
+      "s-resume"() {
+        return `<div class="page"><h1>Resume</h1><div class="card" style="margin-top:12px;max-width:560px">
+          <span class="pill warn">Missing</span>
+          <p>PDF only, up to 5 MB. You can replace or delete it. Other students cannot open it.</p>
+          <button class="btn">Upload resume</button>
+          <button class="btn ghost">View</button>
+          <button class="btn ghost">Delete</button>
+        </div></div>`;
+      },
+      "s-profile"() {
+        return `<div class="page"><h1>Profile</h1><div class="two" style="margin-top:12px">
+          <div class="card"><h2>Personal</h2><label>Name</label><input value="Sample student" /><label>Phone</label><input value="98xxxxxx10" /><label>Email</label><input value="sample@iiitbhopal.ac.in" /><button class="btn" style="margin-top:10px">Save</button></div>
+          <div class="card"><h2>Photo</h2><div class="avatar">SS</div><button class="btn ghost">Replace photo</button><p class="sub">Shown on your application packet.</p></div>
+        </div></div>`;
+      },
+      "s-academics"() {
+        return `<div class="page"><h1>Academics</h1><div class="card" style="max-width:560px;margin-top:12px">
+          <label>Branch</label><input value="CSE" disabled />
+          <label>Batch</label><input value="2027" disabled />
+          <label>CGPA</label><input value="7.4" />
+          <label>Active backlogs</label><input value="0" />
+          <label>Skills</label><input value="Java, SQL, React" />
+          <p class="sub">Branch and batch come from the student record. CGPA is checked again when you apply.</p>
+          <button class="btn">Save academics</button>
+        </div></div>`;
+      },
+      "s-notes"() {
+        return `<div class="page"><h1>Notifications</h1>
+          <div class="banner warn">Pinned · CSE batch 2027. Meridian PPT on 26 Oct is mandatory if you want to sit the test.</div>
+          <div style="margin-top:12px">${table(["Notice", "Audience", "When"], [
+            ["Aster OA link", "Applicants of that drive", "18 Oct"],
+            ["Resume workshop", "Final year", "31 Oct"],
+            ["Profile incomplete", "This student", "Today"]
+          ])}</div></div>`;
+      },
+      "s-analyzer"() {
+        return `<div class="page"><h1>Resume analyzer</h1>
+          <p class="sub">Compares resume text with a job description. Covered terms raise the score. Missing terms are gaps, not a reason to invent experience. This does not decide eligibility.</p>
+          <div class="two" style="margin-top:12px">
+            <div class="card"><h2>Job description</h2><textarea id="jd-box" rows="9">SDE intern
+Required skills: Java, SQL, data structures, REST APIs, Git
+Good to have: React
+CSE or IT, minimum CGPA 7.0</textarea></div>
+            <div class="card"><h2>Resume text</h2><textarea id="resume-box" rows="9">Sample student, CSE, batch 2027, CGPA 7.4
+Projects: library system using Java and SQL
+Coursework: data structures
+Tools: Git</textarea></div>
+          </div>
+          <p style="margin-top:12px"><button class="btn" onclick="analyzePreview()">Analyze against JD</button></p>
+          <div id="analyzer-out" style="margin-top:12px"></div>
+        </div>`;
+      },
+      "s-ai"() {
+        return `<div class="page"><h1>AI placement assistant</h1><p class="sub">Answers stay inside published drives, your profile, and placement preparation. It cannot apply for you.</p>
+          <div class="card" style="margin-top:12px;max-width:680px">
+            <div class="chat">
+              <div class="bubble me">Am I eligible for Meridian?</div>
+              <div class="bubble">CSE and CGPA 7.4 match that sample drive. Apply is blocked because the resume is missing. Helios needs 8.0, so you are short by 0.6. Lumen is ECE only.</div>
+            </div>
+            <div class="search"><input placeholder="Ask about a drive, resume, or round" /><button class="btn">Send</button></div>
+          </div></div>`;
+      },
+      "t-dash"() {
+        return `<div class="page"><h1>TNP team dashboard</h1><p class="sub">Sample coordinator · permissions: view students, manage assigned drives, review applications, publish announcements.</p>
+          <div class="stats three">${stat("Assigned drives", "2", "Meridian, Aster", "#2563eb")}${stat("To review", "4", "New since yesterday", "#d97706")}${stat("Notices you can publish", "1", "CSE batch 2027", "#059669")}</div>
+          <div class="grid-2">
+            <div class="card"><h2>Assigned drives</h2>${table(["Drive", "Closes", "Applicants"], [["Meridian Systems", "18 hours", "3"], ["Aster Analytics", "Closed", "1"]])}<button class="btn ghost" onclick="go('t-drives')">Open drives</button></div>
+            <div class="card"><h2>Needs a decision</h2><p><b>2023CSE018</b> · Meridian · applied</p><p class="sub">Shortlist or hold. You cannot delete the drive.</p><button class="btn" onclick="go('t-apps')">Review</button></div>
+          </div></div>`;
+      },
+      "t-drives"() {
+        return `<div class="page"><h1>Assigned drives</h1><p class="sub">This login can edit Meridian and Aster. Company deletion stays with the administrator.</p>
+          ${table(["Drive", "Status", "Your actions"], [
+            ["Meridian Systems", "Open", "Edit deadline, export applicants"],
+            ["Aster Analytics", "Closed", "Review OA results"]
+          ])}</div>`;
+      },
+      "t-apps"() {
+        return `<div class="page"><h1>Application review · Meridian</h1><p class="sub">Sample rows, not real students.</p>
+          <div style="margin:12px 0">${table(["Roll", "Branch", "CGPA", "Resume", "Status", "Action"], [
+            ["2023CSE042", "CSE", "7.4", "No", "Eligible", "Waiting on resume"],
+            ["2023CSE018", "CSE", "8.1", "Yes", "Applied", "<button class='mini'>Shortlist</button>"],
+            ["2023IT007", "IT", "7.2", "Yes", "Applied", "<button class='mini'>Shortlist</button>"],
+            ["2023CSE055", "CSE", "6.4", "Yes", "Blocked", "CGPA short"]
+          ])}</div>
+          <button class="btn">Download CSV</button></div>`;
+      },
+      "t-students"() {
+        return `<div class="page"><h1>Student records you may open</h1><p class="sub">Limited to students on your drives. Resume opens only with view permission.</p>
+          ${table(["Roll", "Branch", "CGPA", "Resume"], [["2023CSE018", "CSE", "8.1", "Open"], ["2023IT007", "IT", "7.2", "Open"], ["2023CSE042", "CSE", "7.4", "Missing"]])}</div>`;
+      },
+      "t-place"() {
+        return `<div class="page"><h1>Placement updates</h1><p class="sub">You can attach a note to an assigned drive. Publishing a new highest-package figure stays with an administrator, and it must cite the source.</p>
+          <div class="card" style="max-width:560px"><label>Drive</label><input value="Aster Analytics" /><label>Update</label><textarea rows="3">OA scheduled for 28 Oct, 10:00.</textarea><button class="btn">Save update</button></div></div>`;
+      },
+      "t-notes"() {
+        return `<div class="page"><h1>Announcements you can publish</h1>
+          <div class="card" style="max-width:560px"><label>Title</label><input value="Meridian PPT attendance" /><label>Audience</label><select><option>CSE · batch 2027</option><option>Applicants of Meridian</option></select><label>Body</label><textarea rows="3">The talk on 26 Oct is required before the test.</textarea><button class="btn">Publish</button></div></div>`;
+      },
+      "t-criteria"() { return pages.criteria(); },
+      "t-profile"() {
+        return `<div class="page"><h1>Team profile</h1><div class="card" style="max-width:520px"><p><b>Sample coordinator</b></p><p class="sub">Role: TNP team</p><p class="sub">Permissions: view students, manage drives, review applications, manage announcements.</p><p class="sub">Joining criteria for this seat: still a draft. <button class="mini" onclick="go('criteria')">Open criteria</button></p></div></div>`;
+      },
+      "a-dash"() {
+        return `<div class="page"><h1>Admin dashboard</h1><p class="sub">Counts below are a sample database, not enrollment figures.</p>
+          <div class="stats">${stat("Students", "6", "Sample accounts", "#2563eb")}${stat("Companies", "4", "Published profiles", "#7c3aed")}${stat("Open drives", "3", "2 sample, 1 draft", "#d97706")}${stat("Applications", "3", "1 shortlisted", "#059669")}</div>
+          <div class="grid-3" style="margin-top:14px">
+            <div class="card chart-wrap"><h2>Average CTC by batch (LPA)</h2><div class="bars" style="height:120px">${[["40%","21"],["60%","22"],["90%","23"],["52%","24"],["68%","25"],["78%","26"]].map(([h,y]) => `<div style="height:${h}"><span>${y}</span></div>`).join("")}</div></div>
+            <div class="card"><h2>Recent applications</h2><p>2023CSE018 · Meridian · applied</p><p>2023IT007 · Meridian · applied</p><p>2023CSE042 · Aster · shortlisted</p><button class="btn ghost" onclick="go('a-apps')">Review all</button></div>
+            <div class="card"><h2>Shortcuts</h2><div class="links"><button onclick="go('a-students')">Students</button><button onclick="go('a-drives')">Drives</button><button onclick="go('a-stats')">Publish statistics</button><button onclick="go('a-import')">Import / export</button><button onclick="go('a-health')">System health</button></div></div>
+          </div></div>`;
+      },
+      "a-students"() {
+        return `<div class="page"><h1>Students</h1><div class="search"><input placeholder="Search roll or name" /><button class="btn ghost">Search</button></div>
+          ${table(["Name", "Roll", "Branch", "CGPA", "Resume", "Account"], [
+            ["Sample student", "2023CSE042", "CSE", "7.4", "Missing", "Active"],
+            ["Sample two", "2023CSE018", "CSE", "8.1", "On file", "Active"],
+            ["Sample three", "2023IT007", "IT", "7.2", "On file", "Active"]
+          ])}</div>`;
+      },
+      "a-team"() {
+        return `<div class="page"><h1>TNP team members</h1><p class="sub">Add a member only from an authorized list. This table is empty on purpose.</p>
+          <div class="card" style="margin-top:12px"><h2>Add member</h2><div class="two"><div><label>Name</label><input placeholder="From the authorized list" /></div><div><label>Seat</label><input placeholder="Student coordinator" /></div></div><button class="btn">Save as draft</button></div></div>`;
+      },
+      "a-companies"() {
+        return `<div class="page"><h1>Companies</h1><p style="margin:8px 0"><button class="btn">Add company</button></p>
+          ${table(["Company", "Published", "Linked statistics"], [["Amazon", "Yes", "2024 highest 46 LPA"], ["Atlassian", "Yes", "2025 highest 85 LPA"], ["Cred", "Yes", "2026 IT 58 LPA"]])}</div>`;
+      },
+      "a-drives"() {
+        return `<div class="page"><h1>Drives</h1><p style="margin:8px 0"><button class="btn">Create drive</button></p>
+          ${table(["Drive", "Status", "Eligibility", "Deadline"], [
+            ["Meridian Systems", "Open · sample", "CSE/IT · 7.0", "18 hours"],
+            ["Helios Labs", "Open · sample", "CSE/IT · 8.0", "6 days"],
+            ["Lumen Devices", "Draft", "ECE · 7.0", "3 days"]
+          ])}</div>`;
+      },
+      "a-apps"() {
+        return `<div class="page"><h1>Applications</h1>${table(["Student", "Drive", "Status", "Set status"], [
+          ["2023CSE018", "Meridian", "Submitted", "Shortlist / reject"],
+          ["2023IT007", "Meridian", "Submitted", "Shortlist / reject"],
+          ["2023CSE042", "Aster", "Shortlisted", "Assessment / offer"]
+        ])}</div>`;
+      },
+      "a-stats"() {
+        return `<div class="page"><h1>Statistics records</h1><p class="sub">Each row keeps metric type, batch, source, and verification. Highest and average CTC are different record types.</p>
+          ${table(["Metric", "Batch", "Value", "Verification"], [
+            ["Highest package", "2026", "58 LPA · Cred · IT", "Verified · 15 Apr 2026"],
+            ["Average CTC", "2026", "18.02 LPA overall", "Verified · in progress on source date"],
+            ["Median", "—", "Not in the source", "Do not invent"]
+          ])}<p style="margin-top:10px"><button class="btn">Add sourced record</button></p></div>`;
+      },
+      "a-criteria"() {
+        return `<div class="page"><h1>Joining criteria editor</h1><div class="card" style="max-width:560px"><span class="pill warn">Draft</span><label>Title</label><input value="TNP student member" /><label>Body</label><textarea rows="4">Paste the authorized criteria here. Leave unpublished until reviewed.</textarea><button class="btn">Save draft</button> <button class="btn ghost">Publish</button></div></div>`;
+      },
+      "a-notes"() {
+        return `<div class="page"><h1>Announcements</h1>${table(["Title", "Audience", "State"], [["Meridian PPT", "CSE 2027", "Published"], ["Resume workshop", "Final year", "Published"], ["Team-only briefing", "TNP team", "Draft"]])}<p style="margin-top:10px"><button class="btn">New announcement</button></p></div>`;
+      },
+      "a-recruiters"() {
+        return `<div class="page"><h1>Recruiters</h1><p class="sub">Contact people for companies. Sample row only.</p>${table(["Name", "Company", "Email"], [["Sample recruiter", "Meridian Systems", "hiring@example.com"]])}</div>`;
+      },
+      "a-roles"() {
+        return `<div class="page"><h1>Roles and permissions</h1>
+          ${table(["Role", "Can do"], [
+            ["Student", "Own profile, resume, apply to eligible drives"],
+            ["TNP team", "Assigned drives, review, limited student view, announcements"],
+            ["Admin", "Students, team, companies, statistics, roles, import, audit, health"]
+          ])}
+          <div class="card" style="margin-top:12px"><h2>Sample coordinator</h2><p class="sub">Checked: view students, manage drives, review applications, announcements. Unchecked: delete companies, edit roles, import.</p></div></div>`;
+      },
+      "a-import"() {
+        return `<div class="page"><h1>Import / export</h1><div class="two">
+          <div class="card"><h2>Export</h2><label>Dataset</label><select><option>Companies</option><option>Drives</option><option>Placement records</option><option>Announcements</option></select><button class="btn" style="margin-top:10px">Download JSON</button></div>
+          <div class="card"><h2>Import</h2><p class="sub">Up to 200 validated rows. Companies and placement records only, after review.</p><button class="btn ghost">Choose JSON file</button></div>
+        </div></div>`;
+      },
+      "a-audit"() {
+        return `<div class="page"><h1>Audit log</h1>${table(["When", "Actor", "Action", "Target"], [
+          ["Today 09:14", "Sample student", "Apply", "Aster Analytics"],
+          ["18 Oct", "Sample coordinator", "Shortlist", "2023CSE042"],
+          ["15 Apr", "Admin", "Publish statistic", "2026 average CTC"]
+        ])}</div>`;
+      },
+      "a-health"() {
+        return `<div class="page"><h1>System health</h1><div class="stats">${stat("API", "Up", "Sample", "#059669")}${stat("MongoDB", "Check", "Needs a running URI", "#d97706")}${stat("Redis", "Check", "Sessions and OTP", "#d97706")}${stat("OpenAI", "Off", "Key not set", "#64748b")}</div>
+          <div class="card" style="margin-top:14px"><h2>Integrations</h2><p>MSG91 and Cloudinary stay idle until keys are present. Password reset email stays off until the mail host is set. Failures return a clear error and do not expose secrets.</p></div></div>`;
+      }
+    };
+
+    function shell() {
+      if (role === "public") {
+        const links = MENUS.public.map(([id, label]) => `<button class="${screen === id ? "on" : ""}" onclick="go('${id}')">${label}</button>`).join("");
+        return `<div class="public-top"><div class="brand"><div class="mark">TNP</div><div>Training & Placement<small>IIIT Bhopal</small></div></div><nav>${links}</nav><button class="login-btn" onclick="go('login')">${screen === "login" ? "Sign in" : "Sign in"}</button></div>${pages[screen] ? pages[screen]() : pages.home()}`;
+      }
+      const items = MENUS[role].map(([id, label]) => `<button class="nav ${screen === id ? "on" : ""}" onclick="go('${id}')">${label}</button>`).join("");
+      const title = { student: "Student", tnp: "TNP team", admin: "Administrator" }[role];
+      const name = { student: "Sample student", tnp: "Sample coordinator", admin: "Sample admin" }[role];
+      return `<div class="app"><aside class="side"><div class="brand" style="color:#fff;padding:6px 8px 16px"><div class="mark" style="background:#1d4ed8">TNP</div><div>IIIT Bhopal<small style="color:#93c5fd">Training & Placement</small></div></div><div class="who"><b>${name}</b><span class="sub" style="color:#93c5fd">${title}</span></div>${items}<button class="nav" onclick="go('home')">Log out</button></aside><div><div class="topbar"><span class="sub">${title}</span><b>${name}</b></div>${pages[screen] ? pages[screen]() : ""}</div></div>`;
+    }
+
+    function analyzePreview() {
+      const jd = document.getElementById("jd-box").value;
+      const resume = document.getElementById("resume-box").value;
+      const stop = new Set("a an the and or of to for in on with from by at as is are was were be been being this that those these your you we our their its it not no yes into over under about within without per via using use used work working role job company team ability able strong good excellent etc including include required requirement requirements candidate candidates must should will can may have has had who which than then also such other any all each more most some only if when where while after before during through across between same good minimum".split(" "));
+      const words = (text) => [...new Set((String(text).toLowerCase().match(/[a-z][a-z0-9+#.]{1,}/g) || []).filter((word) => word.length > 2 && !stop.has(word.replace(/\./g, ""))))];
+      const resumeSet = new Set(words(resume));
+      const skillLine = (jd.match(/required skills:\s*([^\n]+)/i) || [])[1];
+      const extraLine = (jd.match(/good to have:\s*([^\n]+)/i) || [])[1];
+      const splitTerms = (line) => line.split(/,| and /).map((item) => item.trim()).filter(Boolean);
+      const targets = skillLine ? splitTerms(skillLine).concat(extraLine ? splitTerms(extraLine) : []) : words(jd).slice(0, 12);
+      const covers = (term) => {
+        const normalized = term.toLowerCase();
+        if (resumeSet.has(normalized)) return true;
+        const pieces = normalized.split(/[^a-z0-9+#.]/).filter((part) => part.length > 2);
+        return pieces.length > 0 && pieces.every((part) => resumeSet.has(part));
+      };
+      const matched = [];
+      const missing = [];
+      targets.forEach((term) => (covers(term) ? matched : missing).push(term));
+      const score = targets.length ? Math.round((matched.length / targets.length) * 100) : 0;
+      const suggestions = missing.slice(0, 4).map((term) => `<li>If you have used ${term}, add one project or coursework line. Leave it off if you have not.</li>`).join("");
+      document.getElementById("analyzer-out").innerHTML = `
+        <div class="stats three">
+          <div class="card"><div class="k">Match</div><div class="v">${score}%</div><div class="sub">${matched.length} of ${targets.length} JD terms</div></div>
+          <div class="card"><div class="k">Covered</div><p>${matched.map((item) => `<span class="pill ok">${item}</span>`).join(" ") || "None"}</p></div>
+          <div class="card"><div class="k">Missing</div><p>${missing.map((item) => `<span class="pill warn">${item}</span>`).join(" ") || "None"}</p></div>
+        </div>
+        <div class="card" style="margin-top:12px"><h2>Edits</h2><ul>${suggestions || "<li>The resume text already names the listed skills.</li>"}</ul><p class="sub">Preview uses the same keyword comparison the API returns when OpenAI is not configured. Signed-in students call POST /api/ai/resume-analyze.</p></div>`;
+    }
+
+    function draw() {
+      document.getElementById("r-public").classList.toggle("on", role === "public");
+      document.getElementById("r-student").classList.toggle("on", role === "student");
+      document.getElementById("r-tnp").classList.toggle("on", role === "tnp");
+      document.getElementById("r-admin").classList.toggle("on", role === "admin");
+      document.getElementById("app").innerHTML = `<div class="shell">${shell()}</div>`;
+    }
+
+    document.getElementById("r-public").onclick = () => go("home");
+    document.getElementById("r-student").onclick = () => go("s-dash");
+    document.getElementById("r-tnp").onclick = () => go("t-dash");
+    document.getElementById("r-admin").onclick = () => go("a-dash");
+    window.addEventListener("hashchange", () => {
+      const id = location.hash.replace("#", "");
+      if (pages[id]) go(id);
+    });
+    const start = location.hash.replace("#", "");
+    if (pages[start]) go(start);
+    else draw();
+  </script>
+</body>
+</html>
