@@ -1017,7 +1017,7 @@ export function AdminHealth() {
       </Row>
       <Card className="stat-card p-3 mt-3">
         <h2 className="h6">Integrations</h2>
-        <p className="mb-0">Cloudinary: {features.cloudinary ? 'configured' : 'idle until keys are present'}. Mail: {features.smtp ? 'configured' : 'password reset email stays off until the mail host is set'}. Email OTP: {features.emailOtp ? 'configured' : 'needs the SMTP settings'}.</p>
+        <p className="mb-0">Cloudinary: {features.cloudinary ? 'configured' : 'idle until keys are present'}. Twilio SMS: {features.twilio ? 'configured' : 'OTP, selection, OA, and interview messages stay off until the Twilio keys are set'}.</p>
       </Card>
     </div>
   );

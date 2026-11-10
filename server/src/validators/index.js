@@ -96,6 +96,11 @@ const otpSend = Joi.object({
   purpose: Joi.string()
     .valid(...OTP_PURPOSES)
     .required(),
+  phone: Joi.when('purpose', {
+    is: 'signup',
+    then: phone.required(),
+    otherwise: phone.optional(),
+  }),
 });
 
 const otpVerify = Joi.object({

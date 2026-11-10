@@ -10,7 +10,7 @@ The site runs at [http://localhost:5173/](http://localhost:5173/). The API liste
 
 ### Student portal
 
-- Registration with a 6-digit email OTP. Signup accepts `@gmail.com` and `@iiitbhopal.ac.in`.
+- Registration with a 6-digit SMS OTP sent by Twilio. Signup accepts `@gmail.com` and `@iiitbhopal.ac.in`.
 - Dashboard of open drives, with eligibility shown on each card.
 - Profile and academic fields the student can edit.
 - One PDF resume, up to 5 MB, required before an application is accepted.
@@ -20,16 +20,16 @@ The site runs at [http://localhost:5173/](http://localhost:5173/). The API liste
 - Drive calendar at `/student/calendar` groups open drives by deadline. A notice is added when a drive closes within three days and the student has not applied.
 - A resume must be a real PDF. The file header is checked, not only the name.
 - In-app notices when a status changes.
-- Email when the student clears the online assessment, and a congratulations email on final selection.
+- SMS when the student clears the online assessment, and a congratulations SMS on final selection. The OA and interview messages include the date and time.
 - If the online assessment is not cleared, the tracker shows **oops** and that company is disabled for that student only.
 
-If the mail provider rejects the sender, local signup still fills the OTP into the form so registration can continue.
+Signup OTP, login OTP, selection, OA, interview, and password reset all go out as Twilio SMS to the saved mobile number.
 
 ### Admin dashboard
 
 - Add companies. **Remove** closes that company’s open drives and takes the company off the public list.
 - Create a drive with role, branches, open and close times, package in LPA, and the TNP members who will mark results. Hold Ctrl to assign more than one member. Students see a drive when its status is `open`.
-- Create a TNP login from **TNP Team**. **Suspend** removes the member, disables that login, and emails that they are suspended.
+- Create a TNP login from **TNP Team**. **Suspend** removes the member, disables that login, and sends an SMS that they are suspended.
 - Move an application as far as online assessment. The admin does not mark who cleared that round.
 - **Students** splits unplaced students from placed students. Placed rows are grouped by batch and sorted by package, highest first.
 - **Statistics** stores highest package, average CTC, and median as separate rows. A median is shown only when a sourced row includes it.
@@ -41,9 +41,9 @@ If the mail provider rejects the sender, local signup still fills the OTP into t
 
 - Sees only drives assigned on the drive form.
 - **Application Review** lists students waiting in online assessment.
-- **Selected** emails the student and activates the interview round.
+- **Selected** sends the student an SMS and activates the interview round.
 - **Not selected** records **oops** and disables that company for that student.
-- Students in the interview round can be given a time, online or onsite, and a place or link. That email is separate from an online-assessment miss. **Not selected in interview** does not disable the company.
+- Students in the interview round can be given a time, online or onsite, and a place or link. That SMS is separate from an online-assessment miss. **Not selected in interview** does not disable the company.
 - The waiting list updates as soon as a row is marked.
 - Placement page shows the same unplaced list and the batch-wise placed list.
 
@@ -68,7 +68,7 @@ The seeded public figures are the IIIT Bhopal T&P statistics dated 15 April 2026
 
 - A drive stores when applications open and when they close. Upcoming drives appear on the student dashboard.
 - The student notification inbox records status changes.
-- Email is used for OTP, online-assessment clearance, final selection, and TNP suspension.
+- Twilio SMS is used for OTP, online-assessment date and time, interview date and time, final selection, password reset, and TNP suspension.
 
 The calendar lists deadlines. It does not book interview rooms by itself. The interview time is saved on the application.
 
@@ -99,7 +99,7 @@ The calendar lists deadlines. It does not book interview rooms by itself. The in
 - Passport
 - Redis-backed sessions
 - Joi
-- Nodemailer
+- Twilio SMS
 
 ## Architecture
 
@@ -107,7 +107,7 @@ The calendar lists deadlines. It does not book interview rooms by itself. The in
 - **Server.** Authentication, role checks, validation, eligibility, and recruitment actions.
 - **MongoDB.** Users, companies, drives, applications, team members, and placement records.
 - **Redis.** Sessions, OTP codes, and rate limits.
-- **Email.** Nodemailer through the SMTP settings in `.env`.
+- **SMS.** Twilio sends every OTP and placement message.
 
 ## Getting started
 
@@ -116,7 +116,7 @@ The calendar lists deadlines. It does not book interview rooms by itself. The in
 - Node.js 18 or newer, and npm
 - MongoDB
 - Redis
-- SMTP host, user, password, and a From address the provider accepts
+- A Twilio account SID, auth token, and sender number (`TWILIO_FROM`)
 
 ### Installation
 
@@ -127,7 +127,7 @@ The calendar lists deadlines. It does not book interview rooms by itself. The in
 npm install
 ```
 
-3. Copy `.env.example` to `.env`. Set MongoDB, Redis, `SESSION_SECRET`, `CSRF_SECRET`, SMTP, and `SEED_ADMIN_PASSWORD`. Do not commit `.env`.
+3. Copy `.env.example` to `.env`. Set MongoDB, Redis, `SESSION_SECRET`, `CSRF_SECRET`, the Twilio keys, and `SEED_ADMIN_PASSWORD`. Do not commit `.env`.
 
 4. Start MongoDB and Redis, then start the API and the client together:
 
@@ -165,6 +165,6 @@ npm run build
 
 `npm test` runs the server tests. `npm run build` builds the client.
 
-## Mail delivery
+## SMS delivery
 
-OTP, assessment results, offer mail, and suspension mail use `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `MAIL_FROM`. The From address has to be a verified sender on that account. If sending fails, the portal still saves the signup code, the selection, or the suspension, and the screen shows a warning.
+OTP, OA date and time, interview date and time, selection, password reset, and suspension use `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM`. If sending fails, the portal still saves the selection or the suspension, and the screen shows a warning.

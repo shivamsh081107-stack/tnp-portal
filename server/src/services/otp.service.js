@@ -2,7 +2,7 @@ const env = require('../config/env');
 const { isRedisReady, get, set, expire, ttl, del, incr, decr } = require('../config/redis');
 const { randomDigits, sha256, randomToken } = require('../utils/crypto');
 const { ApiError } = require('../utils/apiError');
-const { sendMail } = require('./mail.service');
+const { sendSms, normalizePhone, maskPhone } = require('./twilio.service');
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -12,7 +12,7 @@ function keyFor(email, purpose) {
   return `otp:${purpose}:${normalizeEmail(email)}`;
 }
 
-async function sendOtp(email, purpose, ip) {
+async function sendOtp(email, purpose, ip, phone) {
   if (!isRedisReady()) throw new ApiError(503, 'OTP service is unavailable because Redis is down.');
   const normalized = normalizeEmail(email);
   if (!normalized.includes('@')) throw new ApiError(400, 'A valid email is required.');
@@ -20,6 +20,8 @@ async function sendOtp(email, purpose, ip) {
   if (purpose === 'signup' && domain !== 'gmail.com' && domain !== env.collegeEmailDomain) {
     throw new ApiError(400, `Signup OTP is sent only to @gmail.com or @${env.collegeEmailDomain}.`);
   }
+  const mobile = normalizePhone(phone);
+  if (!mobile) throw new ApiError(400, 'A valid mobile number is required for the SMS OTP.');
 
   const sendCountKey = `otp:send:${normalized}:${purpose}`;
   const sends = Number((await incr(sendCountKey)) || 0);
@@ -37,38 +39,32 @@ async function sendOtp(email, purpose, ip) {
     hash: sha256(`${normalized}:${purpose}:${otp}`),
     purpose,
     email: normalized,
+    phone: mobile,
     challengeId,
     attempts: 0,
   });
   await set(keyFor(normalized, purpose), payload, env.otpTtlSeconds);
 
-  console.log(`\n======================================================`);
-  console.log(`[IIIT Bhopal TNP] Verification OTP for ${normalized}: >>> ${otp} <<<`);
-  console.log(`Purpose: ${purpose} | Valid for: ${env.otpTtlSeconds} seconds`);
-  console.log(`======================================================\n`);
-
   const minutes = Math.max(1, Math.round(env.otpTtlSeconds / 60));
-  let mailSent = false;
+  let sms;
   try {
-    const mail = await sendMail({
-      to: normalized,
-      subject: 'IIIT Bhopal TNP verification code',
-      text: `Your IIIT Bhopal TNP verification code is ${otp}. It expires in ${minutes} minutes. If you did not request this, ignore this email.`,
-    });
-    mailSent = mail.sent;
-  } catch {
-    mailSent = false;
-  }
-
-  if (!mailSent) {
+    sms = await sendSms(
+      mobile,
+      `Your IIIT Bhopal TNP verification code is ${otp}. It expires in ${minutes} minutes. If you did not request this, ignore this message.`,
+      'otp'
+    );
+  } catch (err) {
+    await del(keyFor(normalized, purpose));
     await decr(sendCountKey);
+    throw err;
   }
 
   return {
     challengeId,
     expiresIn: env.otpTtlSeconds,
-    devOtp: otp,
-    mailSent,
+    maskedPhone: maskPhone(mobile),
+    trial: Boolean(sms.trial),
+    devOtp: sms.trial ? otp : undefined,
   };
 }
 
@@ -91,16 +87,17 @@ async function verifyOtp(email, purpose, otp) {
   }
   await del(keyFor(normalized, purpose));
   const ticket = randomToken();
-  await set(`otp:ok:${ticket}`, JSON.stringify({ email: normalized, purpose }), 600);
-  return { ticket, challengeId: data.challengeId };
+  await set(`otp:ok:${ticket}`, JSON.stringify({ email: normalized, purpose, phone: data.phone || '' }), 600);
+  return { ticket, challengeId: data.challengeId, phone: data.phone || '' };
 }
 
-async function consumeTicket(ticket, email, purpose) {
+async function consumeTicket(ticket, email, purpose, phone) {
   if (!isRedisReady()) throw new ApiError(503, 'OTP service is unavailable because Redis is down.');
   const raw = await get(`otp:ok:${ticket}`);
   if (!raw) return false;
   const data = JSON.parse(raw);
   if (data.email !== normalizeEmail(email) || data.purpose !== purpose) return false;
+  if (phone && data.phone && data.phone !== normalizePhone(phone)) return false;
   await del(`otp:ok:${ticket}`);
   return true;
 }

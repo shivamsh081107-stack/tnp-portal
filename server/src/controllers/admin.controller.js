@@ -21,7 +21,25 @@ const { ROLES, TEAM_PERMISSION_DEFAULTS } = require('../utils/constants');
 const env = require('../config/env');
 const { isRedisReady } = require('../config/redis');
 const { signedResumeUrl, assertFile, uploadBuffer, destroyAsset } = require('../services/cloudinary.service');
-const { sendMail } = require('../services/mail.service');
+const { trySendSms } = require('../services/twilio.service');
+
+function whenText(value) {
+  return new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+}
+
+async function smsTo(phone, text, kind) {
+  if (!phone) return 'SMS was not sent because this account has no mobile number.';
+  const sms = await trySendSms(phone, text, kind);
+  if (!sms.sent) return sms.reason || 'The SMS could not be sent.';
+  if (sms.trial) return 'TRIAL: Twilio sent its sample SMS. Upgrade the account to text the real date, time, and selection message.';
+  return '';
+}
+
+function smsNote(warning, savedPrefix) {
+  if (!warning) return '';
+  if (warning.startsWith('TRIAL:')) return warning.slice(7);
+  return `${savedPrefix} ${warning}`;
+}
 
 const PLACED_STATUSES = new Set(['selected', 'offer']);
 const STATUS_TRANSITIONS = {
@@ -159,17 +177,9 @@ const suspendStudent = asyncHandler(async (req, res) => {
   user.permissions = [];
   await user.save();
   await TnpTeamMember.deleteMany({ $or: [{ user: user._id }, { collegeEmail: user.email }] });
-  let mailWarning = '';
-  if (user.email) {
-    const mail = await sendMail({
-      to: user.email,
-      subject: 'IIIT Bhopal TNP account suspended',
-      text: 'Your IIIT Bhopal Training & Placement account has been suspended. You can no longer sign in.',
-    });
-    if (!mail.sent) mailWarning = 'The suspension email could not be sent.';
-  }
+  const mailWarning = await smsTo(user.phone, 'IIIT Bhopal TNP: your account has been suspended. You can no longer sign in.', 'alert');
   await audit(req, 'suspend', 'User', user._id, { email: user.email });
-  const message = mailWarning ? `Student suspended. ${mailWarning}` : 'Student suspended. They can no longer sign in.';
+  const message = mailWarning ? `Student suspended. ${mailWarning}` : 'Student suspended. An SMS was sent to their mobile number.';
   res.json({ success: true, mailWarning, message, flash: flash('success', message) });
 });
 
@@ -306,14 +316,11 @@ const updateApplication = asyncHandler(async (req, res) => {
       application.trackerMessage = '';
       notice = `You are selected in the online assessment for ${driveDoc?.jobTitle || 'this drive'}. The next round is now active.`;
       const student = await User.findById(application.student);
-      if (student?.email) {
-        const mail = await sendMail({
-          to: student.email,
-          subject: 'Online assessment cleared',
-          text: `${notice} Company: ${driveDoc?.company?.name || 'the company'}.`,
-        });
-        if (!mail.sent) mailWarning = 'The next round is active, but the email could not be sent.';
-      }
+      mailWarning = await smsTo(
+        student?.phone,
+        `IIIT Bhopal TNP: you are selected in the online assessment for ${driveDoc?.jobTitle || 'this drive'} at ${driveDoc?.company?.name || 'the company'}. The interview round is now active.`,
+        'selection'
+      );
     } else {
       application.status = 'rejected';
       application.trackerMessage = 'oops';
@@ -342,18 +349,16 @@ const updateApplication = asyncHandler(async (req, res) => {
     application.oaAt = new Date(req.body.oaAt);
     application.oaMode = req.body.oaMode || '';
     application.oaPlace = req.body.oaPlace || '';
-    const when = application.oaAt.toLocaleString();
-    const scheduleNotice = `Your online assessment is scheduled for ${when}${application.oaMode ? ` (${application.oaMode})` : ''}${application.oaPlace ? `. Link or place: ${application.oaPlace}` : ''}.`;
+    const when = whenText(application.oaAt);
+    const scheduleNotice = `Your online assessment is on ${when}${application.oaMode ? ` (${application.oaMode})` : ''}${application.oaPlace ? `. Link or place: ${application.oaPlace}` : ''}.`;
     notice = scheduleNotice;
     const student = await User.findById(application.student);
-    if (student?.email) {
-      const mail = await sendMail({
-        to: student.email,
-        subject: 'Online assessment scheduled',
-        text: `${scheduleNotice} Drive: ${driveDoc?.jobTitle || ''}. Company: ${driveDoc?.company?.name || ''}.`,
-      });
-      if (!mail.sent) mailWarning = mailWarning || 'The online assessment is saved, but the email could not be sent.';
-    }
+    const smsWarning = await smsTo(
+      student?.phone,
+      `IIIT Bhopal TNP: online assessment for ${driveDoc?.jobTitle || 'your drive'} at ${driveDoc?.company?.name || 'the company'} is on ${when}${application.oaMode ? ` (${application.oaMode})` : ''}${application.oaPlace ? `. ${application.oaPlace}` : ''}.`,
+      'appointment'
+    );
+    if (smsWarning) mailWarning = mailWarning || smsNote(smsWarning, 'The online assessment is saved, but the SMS was not sent.');
   }
   if (req.body.interviewAt) {
     if (application.status !== 'interview') {
@@ -362,18 +367,16 @@ const updateApplication = asyncHandler(async (req, res) => {
     application.interviewAt = new Date(req.body.interviewAt);
     application.interviewMode = req.body.interviewMode || '';
     application.interviewPlace = req.body.interviewPlace || '';
-    const when = application.interviewAt.toLocaleString();
-    const scheduleNotice = `Your interview is scheduled for ${when}${application.interviewMode ? ` (${application.interviewMode})` : ''}${application.interviewPlace ? ` at ${application.interviewPlace}` : ''}.`;
+    const when = whenText(application.interviewAt);
+    const scheduleNotice = `Your interview is on ${when}${application.interviewMode ? ` (${application.interviewMode})` : ''}${application.interviewPlace ? ` at ${application.interviewPlace}` : ''}.`;
     notice = notice || scheduleNotice;
     const student = await User.findById(application.student);
-    if (student?.email) {
-      const mail = await sendMail({
-        to: student.email,
-        subject: 'Interview scheduled',
-        text: `${scheduleNotice} Drive: ${driveDoc?.jobTitle || ''}. Company: ${driveDoc?.company?.name || ''}.`,
-      });
-      if (!mail.sent) mailWarning = mailWarning || 'The interview is saved, but the email could not be sent.';
-    }
+    const smsWarning = await smsTo(
+      student?.phone,
+      `IIIT Bhopal TNP: interview for ${driveDoc?.jobTitle || 'your drive'} at ${driveDoc?.company?.name || 'the company'} is on ${when}${application.interviewMode ? ` (${application.interviewMode})` : ''}${application.interviewPlace ? ` at ${application.interviewPlace}` : ''}.`,
+      'appointment'
+    );
+    if (smsWarning) mailWarning = mailWarning || smsNote(smsWarning, 'The interview is saved, but the SMS was not sent.');
   }
   if (req.body.reviewNotes !== undefined) application.reviewNotes = req.body.reviewNotes;
   if (previousStatus !== application.status) {
@@ -416,14 +419,13 @@ async function markStudentPlaced(application) {
     };
     await profile.save();
   }
-  if (!student?.email) return 'Congratulations email was not sent because the student has no email.';
   const packageLine = drive?.packageLpa != null ? ` Package: ${drive.packageLpa} LPA.` : '';
-  const mail = await sendMail({
-    to: student.email,
-    subject: 'Congratulations on your selection',
-    text: `Congratulations. ${companyName} has selected you for ${role}.${packageLine} You have been moved from the unplaced list to the placed list for batch ${profile?.batch || ''}.`,
-  });
-  return mail.sent ? '' : 'The selection is saved, but the congratulations email could not be sent.';
+  const warning = await smsTo(
+    student?.phone,
+    `IIIT Bhopal TNP: you are selected. ${companyName} has selected you for ${role}.${packageLine} You are now on the placed list for batch ${profile?.batch || ''}.`,
+    'selection'
+  );
+  return smsNote(warning, 'The selection is saved, but the SMS was not sent.');
 }
 
 async function clearPlacementForDrive(application) {
@@ -571,12 +573,11 @@ const createTeamMember = asyncHandler(async (req, res) => {
 
   let mailWarning = '';
   if (createdUser) {
-    const mail = await sendMail({
-      to: user.email,
-      subject: 'Your IIIT Bhopal TNP team login',
-      text: `A TNP team login was created for you.\n\nEmail: ${user.email}\nTemporary password: ${loginPassword}\n\nSign in at ${env.clientOrigin}/login with this email and password. Change the password after you sign in.`,
-    });
-    if (!mail.sent) mailWarning = mail.reason || 'The login email could not be sent.';
+    mailWarning = await smsTo(
+      user.phone,
+      `IIIT Bhopal TNP team login. Email: ${user.email}. Temporary password: ${loginPassword}. Sign in at ${env.clientOrigin}/login and change the password.`,
+      'alert'
+    );
   }
 
   await audit(req, 'create', 'TnpTeamMember', member._id);
@@ -585,8 +586,8 @@ const createTeamMember = asyncHandler(async (req, res) => {
     : !user
       ? 'Team member saved.'
       : mailWarning
-        ? `Team member saved. The login email was not sent, so share this password with them: ${loginPassword}`
-        : 'Team member saved. Login email and password were sent to their email.';
+        ? `Team member saved. ${mailWarning.startsWith('TRIAL:') ? 'Twilio trial sent a sample SMS, so share this password' : 'The login SMS was not sent, so share this password'}: ${loginPassword}`
+        : 'Team member saved. Login details were sent by SMS.';
   res.status(201).json({
     success: true,
     member,
@@ -608,16 +609,9 @@ const deleteTeamMember = asyncHandler(async (req, res) => {
   const user = member.user
     ? await User.findById(member.user)
     : await User.findOne({ email: member.collegeEmail, role: ROLES.TNP_TEAM });
-  const email = user?.email || member.collegeEmail;
-  let mailWarning = '';
-  if (email) {
-    const mail = await sendMail({
-      to: email,
-      subject: 'TNP team access suspended',
-      text: 'You are suspended from the IIIT Bhopal TNP team. Your team login has been removed.',
-    });
-    if (!mail.sent) mailWarning = 'The suspension email could not be sent.';
-  }
+  const mailWarning = user?.phone
+    ? await smsTo(user.phone, 'IIIT Bhopal TNP: you are suspended from the TNP team. Your team login has been removed.', 'alert')
+    : 'The suspension SMS was not sent because this account has no mobile number.';
   if (user && user.role === ROLES.TNP_TEAM) {
     user.isActive = false;
     await user.save();

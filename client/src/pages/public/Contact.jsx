@@ -18,7 +18,7 @@ export default function Contact() {
       setValidated(true);
       return;
     }
-    flash.push({ type: 'info', text: 'This contact form does not send mail unless SMTP is configured on the server. Use the published phone and email instead.' });
+    flash.push({ type: 'info', text: 'Use the published phone number to reach the T&P cell.' });
   };
   return (
     <Container className="py-4">

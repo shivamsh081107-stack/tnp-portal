@@ -160,10 +160,9 @@ const meta = asyncHandler(async (_req, res) => {
     flashAutoDismissMs: env.flashAutoDismissMs,
     collegeEmailDomain: env.collegeEmailDomain,
     features: {
-      emailOtp: Boolean(env.smtpHost && env.smtpUser && env.smtpPass && env.mailFrom),
+      twilio: Boolean(env.twilioAccountSid && env.twilioAuthToken && env.twilioFrom),
       cloudinary: Boolean(env.cloudinaryCloudName && env.cloudinaryApiKey),
       openai: Boolean(env.openaiApiKey),
-      smtp: Boolean(env.smtpHost && env.smtpUser),
     },
   });
 });

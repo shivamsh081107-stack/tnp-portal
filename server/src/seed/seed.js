@@ -332,7 +332,7 @@ async function seed() {
         admin: env.seedAdminEmail,
         team: 'tnp.team@iiitbhopal.ac.in',
         student: 'demo.student@iiitbhopal.ac.in',
-        note: 'Demo passwords are only for local seed. Change them. Signup still requires a working MSG91 OTP in production-like use.',
+        note: 'Demo passwords are only for local seed. Change them. Signup and notices use Twilio SMS.',
       },
       null,
       2

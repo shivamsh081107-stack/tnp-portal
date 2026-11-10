@@ -3,7 +3,7 @@ const User = require('../models/User');
 const StudentProfile = require('../models/StudentProfile');
 const { randomToken, sha256 } = require('../utils/crypto');
 const { sendOtp, verifyOtp, consumeTicket } = require('../services/otp.service');
-const { sendMail, isMailConfigured } = require('../services/mail.service');
+const { trySendSms } = require('../services/twilio.service');
 const { ApiError, flash } = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const env = require('../config/env');
@@ -12,16 +12,22 @@ const { set, isRedisReady } = require('../config/redis');
 
 const sendOtpHandler = asyncHandler(async (req, res) => {
   const { email, purpose } = req.body;
-  const result = await sendOtp(email, purpose, req.ip);
-  const message = result.devOtp
-    ? `OTP generated! For demo/testing, code is: ${result.devOtp}`
-    : 'OTP sent to the provided email address.';
+  let phone = req.body.phone;
+  if (purpose === 'login') {
+    const user = await User.findOne({ email: String(email).toLowerCase(), isActive: true });
+    if (!user) throw new ApiError(400, 'No active account uses this email.');
+    phone = user.phone;
+  }
+  const result = await sendOtp(email, purpose, req.ip, phone);
+  const message = result.trial
+    ? `Twilio trial cannot text the real code. Use ${result.devOtp}. Upgrade Twilio to send the code by SMS.`
+    : `OTP sent by SMS to ${result.maskedPhone}.`;
   res.json({
     success: true,
     message,
     challengeId: result.challengeId,
     expiresIn: result.expiresIn,
-    ...(result.devOtp ? { devOtp: result.devOtp } : {}),
+    ...(result.trial ? { devOtp: result.devOtp } : {}),
     flash: flash('info', message),
   });
 });
@@ -32,15 +38,15 @@ const verifyOtpHandler = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     otpChallengeId: result.ticket,
-    message: 'Email address verified.',
-    flash: flash('success', 'Email address verified.'),
+    message: 'Mobile number verified.',
+    flash: flash('success', 'Mobile number verified.'),
   });
 });
 
 const signup = asyncHandler(async (req, res) => {
   const body = req.body;
-  const used = await consumeTicket(body.otpChallengeId, body.email, 'signup');
-  if (!used) throw new ApiError(400, 'Complete email OTP verification before signing up.');
+  const used = await consumeTicket(body.otpChallengeId, body.email, 'signup', body.phone);
+  if (!used) throw new ApiError(400, 'Complete the SMS OTP verification before signing up.');
 
   const existing = await User.findOne({ $or: [{ email: body.email }, { phone: body.phone }] });
   if (existing) throw new ApiError(409, 'An account with this email or phone already exists.');
@@ -134,7 +140,7 @@ const loginOtp = asyncHandler(async (req, res) => {
   const { email, otpChallengeId } = req.body;
   if (!email || !otpChallengeId) throw new ApiError(400, 'Email and OTP verification are required.');
   const used = await consumeTicket(otpChallengeId, email, 'login');
-  if (!used) throw new ApiError(400, 'Complete email OTP verification before logging in.');
+  if (!used) throw new ApiError(400, 'Complete the SMS OTP verification before logging in.');
   const user = await User.findOne({ email: String(email).toLowerCase(), isActive: true });
   if (!user) throw new ApiError(401, 'Invalid email or OTP.');
   assertPortal(user, req.body.portal);
@@ -175,29 +181,22 @@ const me = asyncHandler(async (req, res) => {
 const forgotPassword = asyncHandler(async (req, res) => {
   const generic = {
     success: true,
-    message: 'If an account exists for that email, password reset instructions will be sent when email is configured.',
-    flash: flash('info', 'If an account exists for that email, password reset instructions will be sent when email is configured.'),
+    message: 'If an account exists for that email, a reset link is sent by SMS to the saved mobile number.',
+    flash: flash('info', 'If an account exists for that email, a reset link is sent by SMS to the saved mobile number.'),
   };
   const user = await User.findOne({ email: req.body.email.toLowerCase() });
   if (!user) return res.json(generic);
   const token = randomToken();
   user.passwordReset = { tokenHash: sha256(token), expiresAt: new Date(Date.now() + 30 * 60 * 1000), usedAt: undefined };
   await user.save();
-  if (isMailConfigured()) {
+  if (user.phone) {
     const link = `${env.clientOrigin}/reset-password?token=${token}`;
-    await sendMail({
-      to: user.email,
-      subject: 'IIIT Bhopal TNP password reset',
-      text: `Reset your password using this single-use link (30 minutes): ${link}`,
-    });
+    await trySendSms(user.phone, `IIIT Bhopal TNP password reset. This link works once and expires in 30 minutes: ${link}`, 'alert');
   }
   if (isRedisReady()) {
     await set(`reset:${sha256(token)}`, String(user._id), 1800);
   }
-  return res.json({
-    ...generic,
-    emailConfigured: isMailConfigured(),
-  });
+  return res.json(generic);
 });
 
 const resetPassword = asyncHandler(async (req, res) => {

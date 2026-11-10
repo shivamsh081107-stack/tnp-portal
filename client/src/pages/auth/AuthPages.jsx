@@ -80,12 +80,8 @@ export function Login() {
     setSendingOtp(true);
     try {
       const { data } = await api.post('/auth/otp/send', { email: form.email, purpose: 'login' });
-      if (data.devOtp) {
-        setForm((prev) => ({ ...prev, otp: data.devOtp }));
-        setNotice(`OTP code: ${data.devOtp} (Auto-filled for demonstration)`);
-      } else {
-        setNotice('OTP sent to your email address.');
-      }
+      if (data.devOtp) setForm((prev) => ({ ...prev, otp: data.devOtp }));
+      setNotice(data.message || 'OTP sent by SMS to the mobile number on this account.');
     } catch (err) {
       setError(err.response?.data?.message || 'Could not send OTP.');
     } finally {
@@ -124,7 +120,7 @@ export function Login() {
           className={`btn btn-sm ${mode === 'otp' ? 'btn-primary' : 'btn-outline-primary'}`}
           onClick={() => { setMode('otp'); setError(''); setNotice(''); }}
         >
-          Email OTP Login
+          SMS OTP Login
         </button>
       </div>
       <Form onSubmit={submit}>
@@ -138,7 +134,8 @@ export function Login() {
           </>
         ) : (
           <>
-            <Form.Label className="mt-3">Email OTP</Form.Label>
+            <Form.Label className="mt-3">SMS OTP</Form.Label>
+            <div className="form-text mb-2">The code is sent by Twilio to the mobile number saved on this account.</div>
             <div className="d-flex gap-2">
               <Form.Control type="text" placeholder="Enter 6-digit OTP" required value={form.otp} onChange={(event) => setForm({ ...form, otp: event.target.value })} />
               <Button type="button" variant="outline-primary" disabled={sendingOtp} onClick={sendLoginOtp}>
@@ -211,21 +208,17 @@ export function Signup() {
   async function sendOtp() {
     setError('');
     setNotice('');
-    if (!form.email) {
-      setError('Please enter your email first.');
+    if (!form.email || !/^[6-9]\d{9}$/.test(form.phone)) {
+      setError('Enter your email and a 10-digit mobile number first.');
       return;
     }
     setSendingOtp(true);
     try {
-      const { data } = await api.post('/auth/otp/send', { email: form.email, purpose: 'signup' });
+      const { data } = await api.post('/auth/otp/send', { email: form.email, phone: form.phone, purpose: 'signup' });
       setOtpSent(true);
       startCountdown(60);
-      if (data.devOtp) {
-        set('otp', data.devOtp);
-        setNotice(`OTP code: ${data.devOtp} (Auto-filled for demonstration)`);
-        return;
-      }
-      const msg = otpSent ? 'OTP resent to your email inbox.' : 'OTP sent to your email inbox.';
+      if (data.devOtp) set('otp', data.devOtp);
+      const msg = data.message || (otpSent ? 'OTP resent by SMS.' : 'OTP sent by SMS.');
       setNotice(msg);
       flash.push({ type: 'info', text: msg });
     } catch (err) {
@@ -313,25 +306,13 @@ export function Signup() {
 
         <Form.Group className="mb-2">
           <Form.Label>Phone</Form.Label>
-          <Form.Control
-            required
-            pattern="[6-9][0-9]{9}"
-            value={form.phone}
-            onChange={(event) => set('phone', event.target.value)}
-            placeholder="10-digit mobile number"
-          />
-          <Form.Control.Feedback type="invalid">Enter a valid 10-digit Indian mobile number.</Form.Control.Feedback>
-        </Form.Group>
-
-        <Form.Group className="mb-2">
-          <Form.Label>Email</Form.Label>
           <div className="d-flex gap-2">
             <Form.Control
-              type="email"
               required
-              value={form.email}
-              onChange={(event) => set('email', event.target.value)}
-              placeholder="@gmail.com or @iiitbhopal.ac.in"
+              pattern="[6-9][0-9]{9}"
+              value={form.phone}
+              onChange={(event) => set('phone', event.target.value)}
+              placeholder="10-digit mobile number"
             />
             <Button
               type="button"
@@ -343,11 +324,24 @@ export function Signup() {
               {sendingOtp ? 'Sending…' : otpSent ? (countdown > 0 ? `Resend (${countdown}s)` : 'Resend OTP') : 'Send OTP'}
             </Button>
           </div>
-          <div className="form-text">Use @gmail.com or @iiitbhopal.ac.in. OTP valid for 10 minutes.</div>
+          <Form.Control.Feedback type="invalid">Enter a valid 10-digit Indian mobile number.</Form.Control.Feedback>
+          <div className="form-text">Twilio sends the OTP to this number.</div>
         </Form.Group>
 
         <Form.Group className="mb-2">
-          <Form.Label>Email OTP</Form.Label>
+          <Form.Label>Email</Form.Label>
+          <Form.Control
+            type="email"
+            required
+            value={form.email}
+            onChange={(event) => set('email', event.target.value)}
+            placeholder="@gmail.com or @iiitbhopal.ac.in"
+          />
+          <div className="form-text">Use @gmail.com or @iiitbhopal.ac.in.</div>
+        </Form.Group>
+
+        <Form.Group className="mb-2">
+          <Form.Label>SMS OTP</Form.Label>
           <Form.Control
             required
             minLength={4}
@@ -356,7 +350,7 @@ export function Signup() {
             onChange={(event) => set('otp', event.target.value)}
             placeholder="Enter 6-digit OTP"
           />
-          <Form.Control.Feedback type="invalid">Please enter the OTP sent to your email.</Form.Control.Feedback>
+          <Form.Control.Feedback type="invalid">Please enter the OTP sent to your mobile number.</Form.Control.Feedback>
         </Form.Group>
 
         <Form.Group className="mb-2">
@@ -395,7 +389,7 @@ export function Signup() {
           feedbackType="invalid"
         />
 
-        {notice && <div className="alert alert-info py-2 mb-2"><i className="bi bi-envelope-check me-2" />{notice}</div>}
+        {notice && <div className="alert alert-info py-2 mb-2"><i className="bi bi-phone me-2" />{notice}</div>}
         {error && <div className="alert alert-danger py-2 mb-2"><i className="bi bi-exclamation-circle me-2" />{error}</div>}
 
         <Button className="w-100 mt-1" type="submit">
@@ -425,7 +419,7 @@ export function ForgotPassword() {
 
   return (
     <Shell title="Reset password">
-      <p className="text-muted">A single-use link goes to the account email when mail is configured. The link expires and cannot be reused.</p>
+      <p className="text-muted">A single-use link is sent by SMS to the mobile number on this account. The link expires and cannot be reused.</p>
       <Form onSubmit={submit}>
         <Form.Label>Email</Form.Label>
         <Form.Control type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
